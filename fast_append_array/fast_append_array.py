@@ -7,10 +7,10 @@ import pandas as pd
 
 
 class FastAppendBase:
-    def __init__(
-        self,
-        cols: List[str],
-    ):
+    __slots__ = ["dtype", "col_indexes"]
+
+    def __init__(self, cols: List[str], dtype: np.dtype = np.float64):
+        self.dtype = dtype
         self.col_indexes: OrderedDict = OrderedDict()
         for idx, n in enumerate(cols):
             self.col_indexes[n] = idx
@@ -42,6 +42,7 @@ class FastAppendBase:
               as a numpy array of shape (n,)
             * a slice and a column name: return the given slice of the given column
               as np.array
+            * an integer and a column name: return the value of a row in a column as scalar
             * a list of strings refers to column names
             * a slice and a list of column names refers to the given slice in the
               given columns
@@ -58,10 +59,10 @@ class FastAppendBase:
             return self.a[:, idx]
         elif isinstance(items, Number):
             data = self.a[[items], :]
-            return FastAppendArray(self.columns, data)
+            return FastAppendArray(self.columns, data, dtype=self.dtype)
         elif isinstance(items, slice):
             data = self.a[items]
-            return FastAppendArray(self.columns, data)
+            return FastAppendArray(self.columns, data, dtype=self.dtype)
         elif isinstance(items, list):
             # list of indices for axis 0, or column list
             e0 = items[0]
@@ -71,20 +72,20 @@ class FastAppendBase:
                 idx = self.names2idx(cols)
                 idx = self.optimize_indexing(idx)
                 data = self.a[:, idx]
-                return FastAppendArray(cols, data)
+                return FastAppendArray(cols, data, dtype=self.dtype)
             else:
                 items = self.optimize_indexing(items)
                 cols = self.columns
                 data = self.a[items, :]
-                return FastAppendArray(cols, data)
+                return FastAppendArray(cols, data, dtype=self.dtype)
         elif isinstance(items, tuple):
             # several dimensions
             rows = items[0]
-            if isinstance(rows, Number):
-                rows = [rows]
             cols = items[1]
             if isinstance(cols, str):
                 return self[cols][rows]
+            if isinstance(rows, Number):
+                rows = [rows]
             if isinstance(rows, str):
                 raise TypeError(
                     "for multi-indexes column names must be in the second dimension"
@@ -295,8 +296,16 @@ class FastAppendArray(FastAppendBase):
         data: np.array = None,
         initial_length: int = 1000,
         increment: float = 0.2,
+        dtype: np.dtype = np.float64,
     ):
-        super().__init__(cols)
+        if data is not None and dtype is not None and data.dtype != dtype:
+            raise TypeError(
+                f"dtype and data.dtype must match, but {dtype} != {data.dtype}"
+            )
+        if data is not None:
+            dtype = dtype or data.dtype
+
+        super().__init__(cols, dtype=dtype)
 
         if data is not None:
             if data.shape[1] != len(cols):
@@ -306,10 +315,15 @@ class FastAppendArray(FastAppendBase):
             self.data = data
             self.length = data.shape[0]
         else:
-            self.data = np.empty((initial_length, len(cols)))
+            self.data = np.empty((initial_length, len(cols)), dtype=dtype)
             self.length = 0
 
         self.increment = increment
+
+    @staticmethod
+    def from_pandas(df, **kwargs) -> "FastAppendArray":
+        a = df.to_numpy()
+        return FastAppendArray(list(df.columns), a, dtype=a.dtype, **kwargs)
 
     def __repr__(self):
         try:
@@ -446,16 +460,16 @@ class FastAppendArray(FastAppendBase):
         new_rows = max(1, int(np.ceil(len(self.data) * self.increment)))
         if min_increment:
             new_rows = max(new_rows, min_increment - new_rows)
-        append_data = np.empty([new_rows] + list(self.data.shape[1:]))
+        append_data = np.empty([new_rows] + list(self.data.shape[1:]), dtype=self.dtype)
         self.data = np.concatenate([self.data, append_data])
 
 
 class FastAppendArrayView(FastAppendBase):
-    __slots__ = ["parent", "length"]
+    __slots__ = ["parent", "length", "col_mapping", "all_col_idxs"]
 
     def __init__(self, parent: FastAppendBase, cols: Dict[str, str], length=None):
         self.col_mapping = OrderedDict(cols)
-        super().__init__(cols=list(self.col_mapping.keys()))
+        super().__init__(cols=list(self.col_mapping.keys()), dtype=parent.dtype)
 
         self.parent = parent
         self.all_col_idxs = self.optimize_indexing(

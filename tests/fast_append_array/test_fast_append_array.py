@@ -67,6 +67,12 @@ def test_getlist_and_cols(data, faa):
     assert res.columns == ["A", "B"]
 
 
+def test_getrow_and_col(data, faa):
+    res = faa[3, "A"]
+    assert isinstance(res, float)
+    assert res == data[3, 0]
+
+
 def test_getrow_and_cols(data, faa):
     res = faa[3, ["A", "B"]]
     assert res.shape == (1, 2)
