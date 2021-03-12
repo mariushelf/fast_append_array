@@ -321,9 +321,26 @@ class FastAppendArray(FastAppendBase):
         self.increment = increment
 
     @staticmethod
-    def from_pandas(df, **kwargs) -> "FastAppendArray":
+    def from_pandas(df, dtype: np.dtype = None, **kwargs) -> "FastAppendArray":
+        """Construct a FastAppendArray from a pandas DataFrame.
+
+        The index of the DataFrame is ignored.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            DataFrame
+        dtype : np.dtype
+            dtype of the FastAppendArray. If it differs from the DataFrame's dtype,
+            the function tries to cast it.
+        kwargs : dict
+            forwarded to `FastAppendArray`'s constructor
+        """
         a = df.to_numpy()
-        return FastAppendArray(list(df.columns), a, dtype=a.dtype, **kwargs)
+        dtype = dtype or a.dtype
+        if dtype != a.dtype:
+            a = a.astype(dtype)
+        return FastAppendArray(list(df.columns), a, dtype=dtype, **kwargs)
 
     def __repr__(self):
         try:
