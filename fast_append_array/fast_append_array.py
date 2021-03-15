@@ -473,6 +473,14 @@ class FastAppendArray(FastAppendBase):
 
         self.length = max(self.length, row + len(data))
 
+    def append_dict(self, rowdict: Dict[str, Any]) -> None:
+        row = [rowdict[n] for n in self.col_indexes]
+        new_length = self.length + 1
+        if len(self.data) < new_length:
+            self._allocate_new_rows(1)
+        self.data[self.length, :] = row
+        self.length += 1
+
     @property
     def columns(self) -> List[str]:
         """ list of column names """
