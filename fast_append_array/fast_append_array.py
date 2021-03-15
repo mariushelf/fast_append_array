@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from numbers import Number
 from typing import Any, Dict, Iterable, List, Union
 
@@ -11,7 +10,7 @@ class FastAppendBase:
 
     def __init__(self, cols: List[str], dtype: np.dtype = np.float64):
         self.dtype = dtype
-        self.col_indexes: OrderedDict = OrderedDict()
+        self.col_indexes = {}
         for idx, n in enumerate(cols):
             self.col_indexes[n] = idx
 
@@ -513,7 +512,7 @@ class FastAppendArrayView(FastAppendBase):
     __slots__ = ["parent", "length", "col_mapping", "all_col_idxs"]
 
     def __init__(self, parent: FastAppendBase, cols: Dict[str, str], length=None):
-        self.col_mapping = OrderedDict(cols)
+        self.col_mapping = cols
         super().__init__(cols=list(self.col_mapping.keys()), dtype=parent.dtype)
 
         self.parent = parent
