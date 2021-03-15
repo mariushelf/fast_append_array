@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from numbers import Number
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, Iterable, List, Union
 
 import numpy as np
 import pandas as pd
@@ -341,6 +341,21 @@ class FastAppendArray(FastAppendBase):
         if dtype != a.dtype:
             a = a.astype(dtype)
         return FastAppendArray(list(df.columns), a, dtype=dtype, **kwargs)
+
+    @staticmethod
+    def from_dicts(
+        data: Iterable[Dict[str, Any]], dtype: np.dtype = np.float64, **kwargs
+    ) -> "FastAppendArray":
+        """ construct a `FastAppendArray` from a list of row dicts """
+        cols = kwargs.pop("cols", None)
+        df = None
+        for d in data:
+            if cols is None:
+                cols = list(d.keys())
+            if df is None:
+                df = FastAppendArray(cols=cols, dtype=dtype, **kwargs)
+            df.append_dict(d)
+        return df
 
     def __repr__(self):
         try:
