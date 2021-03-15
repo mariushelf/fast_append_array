@@ -148,11 +148,16 @@ class FastAppendBase:
     def append_dict(self, rowdict: Dict[str, Any]) -> None:
         """Append one row from a dictionary.
 
+        Subclasses are encouraged to provide an optimized implementation. See
+        `FastAppendArray.append_dict()` for an example.
+
         Parameters
         ----------
         rowdict : dict of str -> float
             dictionary. The keys are column names, the values the respective values
-            in the new row
+            in the new row. `rowdict` must contain an entry for each of the DataFrame's
+            columns. Additional elements in `rowdict` will be ignored or raise an
+            exception, depending on the implementation.
         """
         values = []
         cols = []
