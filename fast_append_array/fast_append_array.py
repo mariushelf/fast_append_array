@@ -10,7 +10,7 @@ class FastAppendBase:
 
     def __init__(self, cols: List[str], dtype: np.dtype = np.float64):
         self.dtype = dtype
-        self.col_indexes = {}
+        self.col_indexes: Dict[str, int] = {}
         for idx, n in enumerate(cols):
             self.col_indexes[n] = idx
 
