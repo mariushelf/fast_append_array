@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fast_append_array"
-version = "0.1.0"
+version = "0.2.0"
 description = "A dataframe which supports blazing fast append operations and column access by name."
 authors = ["Marius Helf <helfsmarius@gmail.com>"]
 license = "MIT"
@@ -21,7 +21,6 @@ classifiers = [
 python = "^3.7"
 numpy = "^1.20.1"
 pandas = {version="^1.0.0", extras=["pandas"]}
-supertimer = "^0.4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.1"
@@ -29,6 +28,7 @@ pre-commit = "^2.8"
 tox = "^3.20.1"
 twine = "^3.2.0"
 pytest-benchmark = "^3.2.3"
+supertimer = "^0.4.0"
 
 [tool.poetry.extras]
 pandas = ["pandas"]
