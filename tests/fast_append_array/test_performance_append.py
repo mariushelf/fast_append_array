@@ -26,29 +26,11 @@ def faa(array, cols):
     return FastAppendArray(cols, array)
 
 
-# @pytest.mark.thirdparty
+@pytest.mark.thirdparty
 # @pytest.mark.parametrize(
 #     "mode",
 #     ["pd", "np", "faa", "faa_a"],
 # )
-# def test_access_single_array_col(array, df, faa, mode, benchmark):
-#     if mode == "pd":
-#         benchmark(lambda: df["m"])
-#     elif mode == "np":
-#         benchmark(lambda: array[:, 13])
-#     elif mode == "faa":
-#         benchmark(lambda: faa["m"])
-#     elif mode == "faa_a":
-#         benchmark(lambda: faa.a[:, 13])
-
-
-# def test_array_access(faa, benchmark):
-#     def f():
-#         faa.a
-#
-#     benchmark(f)
-
-
 @pytest.mark.parametrize(
     "nrows,ncols",
     [
@@ -63,8 +45,7 @@ def faa(array, cols):
     ],
 )
 def test_append(nrows, ncols, benchmark):
-    all_cols = list("abcdefghijklmnopqrstuvwxyz")
-    cols = all_cols[:ncols]
+    cols = [str(x) for x in range(ncols)]
     row = {c: 0 for c in cols}
 
     def append():

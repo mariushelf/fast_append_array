@@ -8,11 +8,17 @@ import pandas as pd
 class FastAppendBase:
     __slots__ = ["dtype", "col_indexes"]
 
-    def __init__(self, cols: List[str], dtype: np.dtype = np.float64):
+    def __init__(
+        self, cols: List[str], dtype: np.dtype = np.float64, col_indexes: Dict = None
+    ):
         self.dtype = dtype
-        self.col_indexes: Dict[str, int] = {}
-        for idx, n in enumerate(cols):
-            self.col_indexes[n] = idx
+        if cols is None and col_indexes is None:
+            raise ValueError("must provide exactly one of cols and col_indexes")
+        elif cols is not None and col_indexes is not None:
+            raise ValueError("must provide exactly one of cols and col_indexes")
+        self.col_indexes: Dict[str, int] = col_indexes or {
+            n: i for i, n in enumerate(cols)
+        }
 
     def __repr__(self):
         return repr(self.a)
@@ -62,6 +68,16 @@ class FastAppendBase:
         elif isinstance(items, slice):
             data = self.a[items]
             return FastAppendArray(self.columns, data, dtype=self.dtype)
+        elif isinstance(items, tuple):
+            # several dimensions
+            rows, cols = items
+            if isinstance(cols, str):
+                return self[cols][rows]
+            if isinstance(rows, Number):
+                rows = [rows]
+            col_idxs = self.names2idx(cols)
+            col_idxs = self.optimize_indexing(col_idxs)
+            return FastAppendArray(cols, self.a[rows][:, col_idxs])
         elif isinstance(items, list):
             # list of indices for axis 0, or column list
             e0 = items[0]
@@ -77,21 +93,6 @@ class FastAppendBase:
                 cols = self.columns
                 data = self.a[items, :]
                 return FastAppendArray(cols, data, dtype=self.dtype)
-        elif isinstance(items, tuple):
-            # several dimensions
-            rows = items[0]
-            cols = items[1]
-            if isinstance(cols, str):
-                return self[cols][rows]
-            if isinstance(rows, Number):
-                rows = [rows]
-            if isinstance(rows, str):
-                raise TypeError(
-                    "for multi-indexes column names must be in the second dimension"
-                )
-            col_idxs = self.names2idx(cols)
-            col_idxs = self.optimize_indexing(col_idxs)
-            return FastAppendArray(cols, self.a[rows][:, col_idxs])
 
     @classmethod
     def optimize_indexing(cls, indices: List[int]) -> Union[slice, List]:
@@ -301,6 +302,7 @@ class FastAppendArray(FastAppendBase):
         initial_length: int = 1000,
         increment: float = 0.2,
         dtype: np.dtype = np.float64,
+        col_indexes: Dict[str, int] = None,
     ):
         if data is not None and dtype is not None and data.dtype != dtype:
             raise TypeError(
@@ -309,12 +311,12 @@ class FastAppendArray(FastAppendBase):
         if data is not None:
             dtype = dtype or data.dtype
 
-        super().__init__(cols, dtype=dtype)
+        super().__init__(cols, dtype=dtype, col_indexes=col_indexes)
 
         if data is not None:
-            if data.shape[1] != len(cols):
+            if data.shape[1] != len(self.col_indexes):
                 raise ValueError(
-                    f"first dimension of data != number of columns ({data.shape[1]} != {len(cols)})"
+                    f"first dimension of data != number of columns ({data.shape[1]} != {len(self.col_indexes)})"
                 )
             self.data = data
             self.length = data.shape[0]
@@ -428,7 +430,7 @@ class FastAppendArray(FastAppendBase):
     @property
     def a(self) -> np.array:
         """ Return data of this dataframe as numpy array """
-        return self.data[: self.length]
+        return self.data[: self.length, :]
 
     def replace_data(self, data: np.array):
         """Replaces the data of this array.
