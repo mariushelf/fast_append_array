@@ -253,10 +253,11 @@ class FastAppendBase:
         dict
             dictionary from column name to value at `idx`
         """
+        r = self.a[idx]
         if cols is None:
-            return {c: self.a[idx, cidx] for cidx, c in enumerate(self.columns)}
+            return dict(zip(self.columns, r))
         else:
-            return {c: self.a[idx, self.col_indexes[c]] for c in cols}
+            return {c: r[self.col_indexes[c]] for c in cols}
 
 
 class FastAppendArray(FastAppendBase):
@@ -513,7 +514,10 @@ class FastAppendArray(FastAppendBase):
 class FastAppendArrayView(FastAppendBase):
     __slots__ = ["parent", "length", "col_mapping", "all_col_idxs"]
 
-    def __init__(self, parent: FastAppendBase, cols: Dict[str, str], length=None):
+    def __init__(
+        self, parent: FastAppendBase, cols: Dict[str, str] = None, length=None
+    ):
+        cols = cols or {c: c for c in parent.columns}
         self.col_mapping = cols
         super().__init__(cols=list(self.col_mapping.keys()), dtype=parent.dtype)
 
@@ -566,3 +570,30 @@ class FastAppendArrayView(FastAppendBase):
     def columns(self) -> List[str]:
         """ list of column names """
         return list(self.col_mapping.keys())
+
+
+# class LazyFastAppendArrayView:
+#     def __init__(
+#         self, parent: FastAppendBase, cols: Dict[str, str] = None, length=None
+#     ):
+#         self._parent = parent
+#         self._cols = cols
+#         self._length = length
+#         self._view = None
+#
+#     @property
+#     def _getview(self):
+#         if self._view is None:
+#             self._view = FastAppendArrayView(
+#                 parent=self._parent, cols=self._cols, length=self._length
+#             )
+#         return self._view
+#
+#     def __getattr__(self, item):
+#         return getattr(self._getview, item)
+#
+#     def __getitem__(self, item):
+#         return self._getview[item]
+#
+#     def __setitem__(self, key, value):
+#         self._getview[key] = value
